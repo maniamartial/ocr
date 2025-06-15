@@ -1,30 +1,34 @@
 frappe.ui.form.on('Sales Order', {
   refresh: function(frm) {
     setTimeout(() => {
-      let $toolbar = $(frm.fields_dict.items.grid.grid_buttons);
-      if ($toolbar.find('.upload-pdf-button').length === 0) {
-        let $btn = $(
-          '<button class="btn btn-xs btn-primary upload-pdf-button" style="margin-left: 10px;">' +
-          'Upload PDF (Debug)' +
-          '</button>'
-        );
+      // Safe reference to grid wrapper
+      let $grid_wrapper = frm.fields_dict.items.grid.wrapper;
 
-        $btn.on('click', function() {
+      // Find footer of child table
+      let $footer_buttons = $($grid_wrapper).find('.grid-footer .grid-buttons');
+
+      if ($footer_buttons.length && $footer_buttons.find('.upload-pdf-button').length === 0) {
+        const $btn = $(`
+          <button class="btn btn-xs btn-secondary upload-pdf-button" style="margin-left: 10px;">
+            Upload PDF
+          </button>
+        `);
+
+        $btn.on('click', function () {
           const file_input = $('<input type="file" accept="application/pdf" style="display:none">');
 
-          file_input.on('change', function(e) {
+          file_input.on('change', function (e) {
             const file = e.target.files[0];
 
             if (file && file.type === "application/pdf") {
-              // Show loading message
-              frappe.show_alert({ 
-                message: "Processing PDF, please wait...", 
-                indicator: 'blue' 
+              frappe.show_alert({
+                message: "Processing PDF, please wait...",
+                indicator: 'blue'
               });
 
               const reader = new FileReader();
 
-              reader.onload = function(event) {
+              reader.onload = function (event) {
                 const result = event.target.result;
                 const base64Data = result.split(',')[1];
 
@@ -37,64 +41,38 @@ frappe.ui.form.on('Sales Order', {
                     filedata: base64Data,
                     is_private: 0
                   },
-                  callback: function(r) {
-                    console.log("Full response:", r);
-                    
+                  callback: function (r) {
                     if (!r.exc && r.message) {
-                      const response = r.message;
-                      const items = response.data || [];
-                      const debug_info = response.debug_info || {};
+                      const items = r.message.data || [];
+                      let added = 0;
 
-                      // Add items if any were found
-                      if (items.length > 0) {
-                        let added_count = 0;
-                        items.forEach(row => {
-                          try {
-                            const child = frm.add_child("items", {
-                              item_code: row["SKU"],
-                              item_name: row["Product"],
-                              qty: row["Qty"],
-                              rate: row["Unit Cost"],
-                              amount: row["Amount Excl. VAT"]
-                            });
-                            added_count++;
-                          } catch (e) {
-                            console.error("Error adding item:", row, e);
-                          }
-                        });
-                        
-                        frm.refresh_field("items");
-                        
-                        frappe.show_alert({ 
-                          message: `Added ${added_count} items!`, 
-                          indicator: 'green' 
-                        });
-                      } else {
-                        frappe.show_alert({ 
-                          message: "No items parsed - check debug info", 
-                          indicator: 'orange' 
-                        });
-                      }
-                      
-                    } else {
-                      frappe.show_alert({ 
-                        message: "Error processing PDF", 
-                        indicator: 'red' 
+                      items.forEach(row => {
+                        try {
+                          frm.add_child("items", {
+                            item_code: row["SKU"],
+                            item_name: row["Product"],
+                            qty: row["Qty"],
+                            rate: row["Unit Cost"],
+                            amount: row["Amount Excl. VAT"]
+                          });
+                          added++;
+                        } catch (e) {
+                          console.warn("Invalid row skipped:", row);
+                        }
                       });
-                      
-                      console.error("PDF processing error:", r);
+
+                      frm.refresh_field("items");
+                      frappe.show_alert({ message: `Added ${added} items!`, indicator: 'green' });
+                    } else {
+                      frappe.show_alert({ message: "No items parsed.", indicator: 'orange' });
                     }
                   },
-                  error: function(err) {
-                    frappe.show_alert({ 
-                      message: "Error processing PDF", 
-                      indicator: 'red' 
-                    });
-                    console.error("PDF processing error:", err);
+                  error: function () {
+                    frappe.show_alert({ message: "Server error.", indicator: 'red' });
                   }
                 });
               };
-              
+
               reader.readAsDataURL(file);
             } else {
               frappe.msgprint("Please select a valid PDF file.");
@@ -104,7 +82,7 @@ frappe.ui.form.on('Sales Order', {
           file_input.trigger('click');
         });
 
-        $toolbar.prepend($btn);
+        $footer_buttons.append($btn);
       }
     }, 300);
   }
