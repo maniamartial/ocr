@@ -1,10 +1,9 @@
 frappe.ui.form.on('Sales Order', {
   refresh: function(frm) {
     setTimeout(() => {
-      // Safe reference to grid wrapper
       let $grid_wrapper = frm.fields_dict.items.grid.wrapper;
 
-      // Find footer of child table
+      
       let $footer_buttons = $($grid_wrapper).find('.grid-footer .grid-buttons');
 
       if ($footer_buttons.length && $footer_buttons.find('.upload-pdf-button').length === 0) {
@@ -45,6 +44,8 @@ frappe.ui.form.on('Sales Order', {
                   callback: function (r) {
                     if (!r.exc && r.message) {
                       const items = r.message.data || [];
+                      frm.clear_table("items");
+
                       let added = 0;
 
                       items.forEach(row => {
@@ -54,7 +55,8 @@ frappe.ui.form.on('Sales Order', {
                             item_name: row["Product"],
                             qty: row["Qty"],
                             rate: row["Unit Cost"],
-                            amount: row["Amount Excl. VAT"]
+                            amount: row["Amount Excl. VAT"],
+                            uom: "Box"
                           });
                           added++;
                         } catch (e) {
