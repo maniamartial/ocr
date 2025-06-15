@@ -9,7 +9,8 @@ frappe.ui.form.on('Sales Order', {
 
       if ($footer_buttons.length && $footer_buttons.find('.upload-pdf-button').length === 0) {
         const $btn = $(`
-          <button class="btn btn-xs btn-secondary upload-pdf-button" style="margin-left: 10px;">
+          <button class="btn btn-xs btn-secondary upload-pdf-button" style="float: right;position: absolute;
+            right: 0;margin-right: 160px;">
             Upload PDF
           </button>
         `);
